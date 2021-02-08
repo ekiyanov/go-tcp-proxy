@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/mgutz/ansi"
 )
@@ -10,6 +11,8 @@ import (
 type Logger interface {
 	Trace(f string, args ...interface{})
 	Debug(f string, args ...interface{})
+	In(f string, args ...interface{})
+	Out(f string, args ...interface{})
 	Info(f string, args ...interface{})
 	Warn(f string, args ...interface{})
 }
@@ -28,6 +31,10 @@ func (l NullLogger) Info(f string, args ...interface{}) {}
 
 // Warn - no-op
 func (l NullLogger) Warn(f string, args ...interface{}) {}
+
+func (l NullLogger) In(f string, args ...interface{}) {}
+
+func (l NullLogger) Out(f string, args ...interface{}) {}
 
 // ColorLogger - A Logger that logs to stdout in color
 type ColorLogger struct {
@@ -63,9 +70,20 @@ func (l ColorLogger) Warn(f string, args ...interface{}) {
 	l.output("red", f, args...)
 }
 
+func (l ColorLogger) In(f string, args ...interface{}) {
+	l.output("blue", "  IN:"+f, args...)
+}
+
+func (l ColorLogger) Out(f string, args ...interface{}) {
+	l.output("green", " OUT:"+f, args...)
+}
+
 func (l ColorLogger) output(color, f string, args ...interface{}) {
-	if l.Color && color != "" {
+	if color != "" {
 		f = ansi.Color(f, color)
 	}
-	fmt.Printf(fmt.Sprintf("%s%s\n", l.Prefix, f), args...)
+
+	sec := time.Now().Unix() % 3600
+
+	fmt.Printf(fmt.Sprintf("%04d| %s\n", sec, f), args...)
 }

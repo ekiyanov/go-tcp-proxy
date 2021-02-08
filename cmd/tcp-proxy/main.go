@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"net"
 	"os"
 	"regexp"
@@ -86,7 +85,6 @@ func main() {
 		p.Log = proxy.ColorLogger{
 			Verbose:     *verbose,
 			VeryVerbose: *veryverbose,
-			Prefix:      fmt.Sprintf("Connection #%03d ", connid),
 			Color:       *colors,
 		}
 

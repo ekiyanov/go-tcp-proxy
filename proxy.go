@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"bufio"
 	"crypto/tls"
 	"io"
 	"net"
@@ -106,29 +107,30 @@ func (p *Proxy) err(s string, err error) {
 func (p *Proxy) pipe(src, dst io.ReadWriter) {
 	islocal := src == p.lconn
 
-	var dataDirection string
-	if islocal {
-		dataDirection = ">>> %d bytes sent%s"
-	} else {
-		dataDirection = "<<< %d bytes recieved%s"
-	}
-
-	var byteFormat string
-	if p.OutputHex {
-		byteFormat = "%x"
-	} else {
-		byteFormat = "%s"
-	}
-
+	/*	var dataDirection string
+		if islocal {
+			dataDirection = ">>> %d bytes sent%s"
+		} else {
+			dataDirection = "<<< %d bytes recieved%s"
+		}
+	*/
+	/*	var byteFormat string
+		if p.OutputHex {
+			byteFormat = "%x"
+		} else {
+			byteFormat = "%s"
+		}
+	*/
 	//directional copy (64k buffer)
-	buff := make([]byte, 0xffff)
+	//	buff := make([]byte, 0xffff)
+
+	lineReader := bufio.NewReader(src)
 	for {
-		n, err := src.Read(buff)
+		b, err := lineReader.ReadBytes('\n')
 		if err != nil {
 			p.err("Read failed '%s'\n", err)
 			return
 		}
-		b := buff[:n]
 
 		//execute match
 		if p.Matcher != nil {
@@ -141,14 +143,24 @@ func (p *Proxy) pipe(src, dst io.ReadWriter) {
 		}
 
 		//show output
-		p.Log.Debug(dataDirection, n, "")
-		p.Log.Trace(byteFormat, b)
+
+		if islocal {
+			p.Log.Out(string(b))
+		} else {
+			p.Log.In(string(b))
+		}
+		//		p.Log.Debug(dataDirection, n, "")
+		//		p.Log.Trace(byteFormat, b)
 
 		//write out result
-		n, err = dst.Write(b)
+		n, err := dst.Write(b)
 		if err != nil {
 			p.err("Write failed '%s'\n", err)
 			return
+		}
+
+		if n != len(b) {
+			p.Log.Warn("Written less than received %d written, %d received\n", n, len(b))
 		}
 		if islocal {
 			p.sentBytes += uint64(n)
